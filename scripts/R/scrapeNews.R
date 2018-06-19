@@ -29,7 +29,10 @@ newstext <- data.frame(
                        slug = vector(length = length(linksall)),
                        image = vector(length = length(linksall)),
                        altText = vector(length = length(linksall)),
-                       video = vector(length = length(linksall))
+                       video = vector(length = length(linksall)),
+                       videoID = vector(length = length(linksall)),
+                       videoTitle = vector(length = length(linksall)),
+                       htmlText = vector(length = length(linksall))
 )
 
 for(i in 1:length(linksall)){
@@ -54,7 +57,12 @@ for(i in 1:length(linksall)){
     newstext[i,3] <- xpathSApply(news, "//div[contains(@class, 'field-type-text-with-summary')]", xmlValue)
   );  
   
-  print(xpathSApply(news, "//div[contains(@class, 'field-type-text-with-summary')]", xmlValue))
+  htmlText <-xpathSApply(news, "//div[contains(@class, 'field-type-text-with-summary')]/div/node()"  )
+  raw <- paste(capture.output(htmlText[[1]], file=NULL), collapse="\n")
+  result <- try(
+    newstext[i,10] <- raw
+  );  
+  print(xpathSApply(news, "//div[contains(@class, 'field-type-text-with-summary')]/div/div/node()"))
   
   result <- try(
     newstext[i,4] <- substring(linksall[[i]], 7)
@@ -64,8 +72,11 @@ for(i in 1:length(linksall)){
 
   alt <- xpathSApply(news, "//div[1]/div/div/a/img[contains(@class, 'campl-scale-with-grid')]/@alt")[1]
   print(paste0("List:",length(alt)))
-  
+
   video <- xpathSApply(news, "//div[contains(@class, 'file-video')]", xmlValue)
+  videoID <- xpathSApply(news, "//iframe[contains(@class, 'media-youtube-player')]/@src")
+  videoTitle <- xpathSApply(news, "//iframe[contains(@class, 'media-youtube-player')]/@title")
+  
   print(paste0("Video: ", video))
  
   result <- try(
@@ -86,16 +97,38 @@ for(i in 1:length(linksall)){
   
  result <- try(
    if(length(video) >= 1) {
-    newstext[i,7] <- video 
+    newstext[i,7] <- trimws(video) 
    } else {
      newstext[i,7] <- NA
    }
  ); 
  
+  result <- try(
+    if(length(videoID) >= 1) {
+      newstext[i,8] <- videoID 
+    } else {
+      newstext[i,8] <- NA
+    }
+  ); 
+  
+  result <- try(
+    if(length(videoTitle) >= 1) {
+      newstext[i,9] <- videoTitle 
+    } else {
+      newstext[i,9] <- NA
+    }
+  ); 
 }
 
 newstext[newstext == FALSE] <- NA
 newstext$date <- gsub(",","",trimws( newstext$date))
+newstext$htmlText <- gsub("<div class=\"field-item even\">","", newstext$htmlText)
+newstext$htmlText <- gsub("</div>","", newstext$htmlText)
+newstext$htmlText <- gsub("<p> </p>","", newstext$htmlText)
+newstext$htmlText <- gsub("<p> </p>","", newstext$htmlText)
+newstext$htmlText <- gsub("class=\"rtejustify\"","", newstext$htmlText) 
+newstext$videoID <- gsub("\\?wmode=opaque&controls=", "", newstext$videoID)
+newstext$videoID <- gsub("https://www.youtube.com/embed/", "", newstext$videoID)
 
 # Fix date string
 library(lubridate)
@@ -111,3 +144,4 @@ newstext$url <- paste0("http://www.fitzmuseum.cam.ac.uk", linksall)
 
 # Write a csv file
 write.csv(newstext, file='fitz.csv',row.names=FALSE, na="")
+
