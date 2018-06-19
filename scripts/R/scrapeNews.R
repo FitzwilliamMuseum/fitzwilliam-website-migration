@@ -145,3 +145,30 @@ newstext$url <- paste0("http://www.fitzmuseum.cam.ac.uk", linksall)
 # Write a csv file
 write.csv(newstext, file='fitz.csv',row.names=FALSE, na="")
 
+# Download the images and log 404s 
+if (!file.exists("images")){
+  dir.create("images")
+}
+
+if (!file.exists("logs")){
+  dir.create("logs")
+}
+
+logfile <- "imageDownloads.log"
+log_con <- file(logfile)
+
+download <- function(data){
+    url <- data['image'][[1]]
+    name <- strsplit(basename(url), "\\?")
+    name <- URLdecode(unlist(name)[1])
+    exist <- url.exists(url) 
+    if(exist == TRUE){
+      download.file(URLencode(url), destfile = paste("images",name, sep = '/'))
+    } else {
+      print("That file is a 404")
+      message <- paste0(url,"|","404 \n")
+      cat(message, file ="logs/imageDownloads.log", append = TRUE)
+    }
+  
+}
+apply(newstext, 1, download)
